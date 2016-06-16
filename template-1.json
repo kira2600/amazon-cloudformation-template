@@ -1,3 +1,150 @@
-"myS3Bucket" : {
+{
+   "AWSTemplateFormatVersion" : "2010-09-09",
+   "Description" : "Test LB",
+   "Parameters" : {
+   	},
+   
+   "Mappings" : {
+   	},
+
+   "Resources" : {
+   		"myS3Bucket" : {
       "Type" : "AWS::S3::Bucket"
+      	},
+		
+    "MyEIP" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+      "InstanceId" : { "Ref" : "EC2Instance" }
       }
+    },
+
+    "MyEIP2" : {
+      "Type" : "AWS::EC2::EIP",
+      "Properties" : {
+      "InstanceId" : { "Ref" : "EC2Instance2" }
+      }
+    },
+
+		"EC2Instance" : {
+      "AvailabilityZone" : "eu-central-1a",
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : "t2.micro",
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup_22" }, { "Ref" : "InstanceSecurityGroup_80" } ],
+        "KeyName" : "key-test",
+        "ImageId" : "ami-ecf9c2f1",
+        "Tags" : [ { "Key" : "NameTag", "Value" : "EC2Instance" } , { "Key" : "NumberTag", "Value" : "1" } ],
+        "BlockDeviceMappings" : [
+            {
+              "DeviceName" : "/dev/sda1",
+              "Ebs" : {
+              "VolumeType" : "gp2",
+              "DeleteOnTermination" : "true",
+              "VolumeSize" : "25"
+              }
+             }
+        ],
+        "UserData" : {
+          "Fn::Base64" : {
+            "Fn::Join" : [ "", [
+              "#!/bin/bash -xe\n",
+              "yum install httpd -y && echo \"$HOSTNAME\" >/var/www/html/index.html && service httpd start"
+        ]]}}
+             }
+    },
+
+    "InstanceSecurityGroup_22" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "InstanceSecurityGroup_80" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access via port 80",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "EC2Instance2" : {
+      "AvailabilityZone" : "eu-west-1a",
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "InstanceType" : "t2.micro",
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup2_22" }, { "Ref" : "InstanceSecurityGroup2_80" } ],
+        "KeyName" : "key-test",
+        "ImageId" : "ami-ecf9c2f1",
+        "Tags" : [ { "Key" : "NameTag", "Value" : "EC2Instance2" } , { "Key" : "NumberTag", "Value" : "2" } ],
+        "BlockDeviceMappings" : [
+            {
+              "DeviceName" : "/dev/sda1",
+              "Ebs" : {
+              "VolumeType" : "gp2",
+              "DeleteOnTermination" : "true",
+              "VolumeSize" : "25"
+              }
+             }
+        ],
+        "UserData" : {
+              "Fn::Base64" : {
+                "Fn::Join" : [ "", [
+                      "#!/bin/bash -xe\n",
+                      "yum install httpd -y && echo \"$HOSTNAME\" >/var/www/html/index.html && service httpd start"
+        ]]}}
+             }
+    },
+
+    "InstanceSecurityGroup2_22" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "InstanceSecurityGroup2_80" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access via port 80",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    },
+
+    "LoadBalancerTest" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {"AvailabilityZones" : [ "eu-central-1a", "eu-west-1a" ],
+        "Instances" : [ { "Ref" : "EC2Instance" }, { "Ref" : "EC2Instance2" } ],
+        "LoadBalancerName" : "TestLoadBalancer",
+        "Listeners" : [ { 
+        "InstancePort" : "80",
+        "LoadBalancerPort" : "80", 
+        "Protocol" : "HTTP"
+        } ]
+      }
+    }
+  }
+}
